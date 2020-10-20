@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
 import {
   Container,
@@ -22,6 +22,14 @@ import EmpSelector from "../features/emp-selector/EmpSelector";
 import AllPositions from "../features/all-positions/AllPositions";
 import Weth from "../features/weth/Weth";
 import Yield from "../features/yield/Yield";
+import Analytics from "../features/analytics/Analytics";
+
+import EmpAddress from "../containers/EmpAddress";
+import Collateral from "../containers/Collateral";
+import Token from "../containers/Token";
+import WethContract from "../containers/WethContract";
+
+import { YIELD_TOKENS } from "../constants/yieldTokens";
 
 import GitHubIcon from "@material-ui/icons/GitHub";
 import TwitterIcon from "@material-ui/icons/Twitter";
@@ -29,6 +37,7 @@ import TwitterIcon from "@material-ui/icons/Twitter";
 const StyledTabs = styled(Tabs)`
   & .MuiTabs-flexContainer {
     border-bottom: 1px solid #999;
+    width: 200%;
   }
   & .Mui-selected {
     font-weight: bold;
@@ -42,29 +51,52 @@ const Blurb = styled.div`
 `;
 
 export default function Index() {
-  const [tabIndex, setTabIndex] = useState(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedMenuItem, setSelectedMenuItem] = useState<string>(
+    "General Info"
+  );
+  const [options, setOptions] = useState<Array<string>>([]);
+  const { address: collAddress } = Collateral.useContainer();
+  const { address: tokenAddress } = Token.useContainer();
+  const { contract: weth } = WethContract.useContainer();
+  const { empAddress } = EmpAddress.useContainer();
 
-  const options = [
-    "General Info",
-    "Manage Position",
-    "All Positions",
-    "Wrap/Unwrap WETH",
-    "yUSD Yield",
-  ];
+  const isYieldToken =
+    tokenAddress &&
+    Object.keys(YIELD_TOKENS).includes(tokenAddress.toLowerCase());
+
+  const buildOptionsList = () => {
+    // Default list that all contracts have.
+    let menuOptions = ["General Info", "Manage Position", "All Positions"];
+    // If it is weth collateral contract then add the weth option.
+    if (weth && collAddress?.toLowerCase() == weth.address.toLowerCase()) {
+      menuOptions.push("Wrap/Unwrap WETH");
+    }
+
+    // If it is a yield token then add the yUSD yield and analytics tabs.
+    if (isYieldToken) {
+      menuOptions = menuOptions.concat(["yUSD Yield", "Analytics"]);
+    }
+
+    // Update selected page if the user toggles between EMPs while selected on
+    // invalid pages (i.e on Wrap/Unwrap then moves to uUSDrBTC).
+    if (menuOptions.indexOf(selectedMenuItem) == -1) {
+      setSelectedMenuItem("General Info");
+    }
+    return menuOptions;
+  };
+
+  useEffect(() => {
+    setOptions(buildOptionsList());
+  }, [empAddress, weth, collAddress, isYieldToken, selectedMenuItem]);
 
   const handleClickListItem = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleMenuItemClick = (
-    event: React.MouseEvent<HTMLElement>,
-    index: number
-  ) => {
-    setSelectedIndex(index);
+  const handleMenuItemClick = (index: number) => {
     setAnchorEl(null);
-    setTabIndex(index);
+    setSelectedMenuItem(options[index]);
   };
 
   const handleClose = () => {
@@ -77,9 +109,12 @@ export default function Index() {
         <Header />
         <EmpSelector />
         <Hidden only={["sm", "xs"]}>
-          <StyledTabs value={tabIndex} onChange={(_, i) => setTabIndex(i)}>
+          <StyledTabs
+            value={options.indexOf(selectedMenuItem)}
+            onChange={(_, index) => handleMenuItemClick(index)}
+          >
             {options.map((option, index) => (
-              <Tab key={option} label={option} disableRipple />
+              <Tab key={index} label={option} disableRipple />
             ))}
           </StyledTabs>
         </Hidden>
@@ -94,7 +129,7 @@ export default function Index() {
                 </Grid>
                 <Grid item>
                   <Typography style={{ marginTop: `8px` }}>
-                    <strong>Current page:</strong> {options[selectedIndex]}
+                    <strong>Current page:</strong> {selectedMenuItem}
                   </Typography>
                 </Grid>
               </Grid>
@@ -107,9 +142,9 @@ export default function Index() {
             >
               {options.map((option, index) => (
                 <MenuItem
-                  key={option}
-                  selected={index === selectedIndex}
-                  onClick={(event) => handleMenuItemClick(event, index)}
+                  key={index}
+                  selected={index === options.indexOf(selectedMenuItem)}
+                  onClick={(_) => handleMenuItemClick(index)}
                 >
                   {option}
                 </MenuItem>
@@ -117,7 +152,7 @@ export default function Index() {
             </Menu>
           </div>
         </Hidden>
-        {tabIndex === 0 && (
+        {selectedMenuItem === "General Info" && (
           <>
             <Blurb>
               <Typography>
@@ -154,14 +189,11 @@ export default function Index() {
             <ContractState />
           </>
         )}
-
-        {tabIndex === 1 && <ManagePosition />}
-
-        {tabIndex === 2 && <AllPositions />}
-
-        {tabIndex === 3 && <Weth />}
-
-        {tabIndex === 4 && <Yield />}
+        {selectedMenuItem === "Manage Position" && <ManagePosition />}
+        {selectedMenuItem === "All Positions" && <AllPositions />}
+        {selectedMenuItem === "yUSD Yield" && <Yield />}
+        {selectedMenuItem === "Wrap/Unwrap WETH" && <Weth />}
+        {selectedMenuItem === "Analytics" && <Analytics />}
       </Box>
       <Box py={4} textAlign="center">
         <IconButton
@@ -180,6 +212,14 @@ export default function Index() {
         >
           <TwitterIcon fontSize="inherit" />
         </IconButton>
+        <a
+          href="/terms"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ marginRight: `16px` }}
+        >
+          <strong>Terms</strong>
+        </a>
         <a
           href="https://vercel.com/?utm_source=uma%2Femp-tools"
           target="_blank"

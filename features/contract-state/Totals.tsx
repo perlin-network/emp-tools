@@ -11,7 +11,8 @@ import { getExchangeInfo } from "../../utils/getExchangeLinks";
 
 const DataBox = styled(Box)`
   border: 1px solid #434343;
-  padding: 1rem 2rem;
+  padding: 1rem 1rem;
+  margin: 1rem 1rem;
 `;
 
 const Label = styled.div`
@@ -64,8 +65,19 @@ const Totals = () => {
     tokenAddress !== null &&
     provider !== null
   ) {
-    const prettyTotalCollateral = Number(totalCollateral).toLocaleString();
-    const prettyTotalTokens = Number(totalTokens).toLocaleString();
+    const prettyTotalCollateral = Number(totalCollateral).toLocaleString(
+      undefined,
+      {
+        style: "decimal",
+        maximumFractionDigits: 4,
+        minimumFractionDigits: 4,
+      }
+    );
+    const prettyTotalTokens = Number(totalTokens).toLocaleString(undefined, {
+      style: "decimal",
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2,
+    });
     const prettyCollSymbol = collSymbol;
     const prettyTokenSymbol = tokenSymbol;
     const getExchangeLinkCollateral = exchangeInfo.getExchangeUrl(collAddress);
@@ -118,7 +130,7 @@ const Totals = () => {
     addTokenToMetamask: any = null
   ) {
     return (
-      <>
+      <Grid container spacing={0}>
         <Grid item md={6} xs={12}>
           <DataBox>
             <Typography variant="h4">
@@ -189,7 +201,7 @@ const Totals = () => {
             </LinksContainer>
           </DataBox>
         </Grid>
-      </>
+      </Grid>
     );
   }
 };

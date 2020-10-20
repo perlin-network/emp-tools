@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import styled from "styled-components";
 import EmpState from "../../containers/EmpState";
 import Balancer from "../../containers/Balancer";
+import Token from "../../containers/Token";
+import { calcApr } from "../../utils/calculators";
 
 const FormInput = styled.div`
   margin-top: 20px;
@@ -22,6 +24,7 @@ const YieldCalculator = () => {
   const { empState } = EmpState.useContainer();
   const { expirationTimestamp } = empState;
   const { usdPrice } = Balancer.useContainer();
+  const { symbol: tokenSymbol } = Token.useContainer();
 
   const [tokenPrice, setTokenPrice] = useState<string>("");
   const [daysToExpiry, setDaysToExpiry] = useState<string>("");
@@ -55,13 +58,10 @@ const YieldCalculator = () => {
     if (_tokenPrice <= 0 || _daysToExpiry <= 0) {
       return null;
     }
-
-    // `yieldPerUnit` = (FACE/yUSD_PX)^(1/(365/DAYS_TO_EXP)) - 1,
-    // where FACE = $1. More details: https://www.bankrate.com/glossary/a/apy-annual-percentage-yield/
-    const yieldPerUnit =
-      Math.pow(1 / _tokenPrice, 1 / (_daysToExpiry / DAYS_PER_YEAR)) - 1;
-    const flipSign = _selectedUserMode === USER_MODE.BUY ? 1 : -1;
-    return yieldPerUnit * flipSign;
+    if (_selectedUserMode === USER_MODE.BUY) {
+      return calcApr(_tokenPrice, 1, _daysToExpiry);
+    }
+    return calcApr(1, _tokenPrice, _daysToExpiry);
   };
 
   const prettyPercentage = (x: number | null) => {
@@ -90,9 +90,10 @@ const YieldCalculator = () => {
 
   return (
     <span>
-      <Typography variant="h5">yUSD Yield Calculator</Typography>
+      <Typography variant="h5">{tokenSymbol} Yield Calculator</Typography>
+      <br></br>
       <Typography>
-        The yield for yUSD changes if you plan on <i>buying</i> it as a
+        The yield for {tokenSymbol} changes if you plan on <i>buying</i> it as a
         borrower, looking for a stable yield or <i>selling</i> it as a lender,
         looking to gain levered exposure on your ETH.
       </Typography>
@@ -120,12 +121,12 @@ const YieldCalculator = () => {
               <TextField
                 fullWidth
                 type="number"
-                label="Current yUSD Price (USD)"
+                label={`Current ${tokenSymbol} Price (USD)`}
                 value={tokenPrice}
                 onChange={(e) => setTokenPrice(e.target.value)}
                 variant="outlined"
                 inputProps={{ min: "0", max: "10", step: "0.01" }}
-                helperText={`Enter the price of yUSD in $`}
+                helperText={`${tokenSymbol} price in USD`}
                 InputLabelProps={{
                   shrink: true,
                 }}
@@ -141,7 +142,7 @@ const YieldCalculator = () => {
                 value={daysToExpiry}
                 onChange={(e) => setDaysToExpiry(e.target.value)}
                 inputProps={{ min: "0", step: "1" }}
-                helperText={`Days to expiry for chosen EMP: ${daysToExpiry}`}
+                helperText={`Days to expiry for EMP: ${daysToExpiry}`}
                 variant="outlined"
                 InputLabelProps={{
                   shrink: true,
