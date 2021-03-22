@@ -1,9 +1,11 @@
-import { Box, TextField, Typography, Grid } from "@material-ui/core";
+import { Box, TextField, Typography, Grid, Tooltip } from "@material-ui/core";
 
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import Balancer from "../../containers/Balancer";
 import Token from "../../containers/Token";
+import EmpAddress from "../../containers/EmpAddress";
+import DevMining from "../../containers/DevMining";
 
 import {
   WEEKS_PER_YEAR,
@@ -24,6 +26,8 @@ const FarmingCalculator = () => {
     poolAddress,
   } = Balancer.useContainer();
   const { symbol: tokenSymbol, address } = Token.useContainer();
+  const { empAddress } = EmpAddress.useContainer();
+  const { devMiningRewards } = DevMining.useContainer();
 
   // Set a default token address
   const [tokenAddress, setTokenAddress] = useState<string>(
@@ -183,9 +187,26 @@ const FarmingCalculator = () => {
     if (address) {
       setTokenAddress(address.toLowerCase());
     }
-    if (Object.keys(WEEKLY_UMA_REWARDS).includes(tokenAddress)) {
+    if (devMiningRewards == null || empAddress == null) return;
+    if (
+      rollFromTokenObj &&
+      Object.keys(WEEKLY_UMA_REWARDS).includes(tokenAddress) &&
+      devMiningRewards.has(empAddress)
+    ) {
       // Strip out rewards that have expired or have not started yet.
       const allRewards = WEEKLY_UMA_REWARDS[tokenAddress];
+      // First, determine which EMP address is receiving dev rewards. If roll has concluded,
+      // then use the current EMP address, other use the rollFromToken's EMP address.
+      let liquidityRewards;
+      if (isRolled) {
+        liquidityRewards = parseFloat(devMiningRewards.get(empAddress) || "0");
+      } else {
+        liquidityRewards = parseFloat(
+          devMiningRewards.get(rollFromTokenObj.rollFromEmpAddress) || "0"
+        );
+      }
+      // Hardcoding LM rewards to half of dev rewards; this should ideally be parameterized.
+      liquidityRewards /= 2;
       const filteredRewards = [];
       for (let i = 0; i < allRewards.length; i++) {
         const reward = allRewards[i];
@@ -202,6 +223,9 @@ const FarmingCalculator = () => {
           // Reward has not started.
           continue;
         } else {
+          if (reward.token == "UMA") {
+            reward.count = liquidityRewards;
+          }
           filteredRewards.push(reward);
         }
       }
@@ -232,7 +256,13 @@ const FarmingCalculator = () => {
         setIsRollToToken(false);
       }
     }
-  }, [address, tokenAddress, rollFromTokenObj, rollFromTokenAddress]);
+  }, [
+    address,
+    tokenAddress,
+    rollFromTokenObj,
+    rollFromTokenAddress,
+    devMiningRewards,
+  ]);
 
   // Update default pool information
   useEffect(() => {
@@ -357,6 +387,25 @@ const FarmingCalculator = () => {
                     <span key={rewardObj.token}>
                       <br></br>
                       <strong>
+                        {rewardObj.token === "UMA" && (
+                          <Tooltip
+                            placement="top"
+                            title="This is a rough estimation which changes based on relative value locked vs all eligible contracts. Actual payout may differ significantly. Click to learn more."
+                          >
+                            <span>
+                              <u>
+                                <i>
+                                  <a
+                                    href="https://twitter.com/UMAprotocol/status/1324199135080148993"
+                                    target="_blank"
+                                  >
+                                    Estimated
+                                  </a>
+                                </i>
+                              </u>{" "}
+                            </span>
+                          </Tooltip>
+                        )}
                         Weekly {rewardObj.token} distributed to pool:
                       </strong>
                       {" " + rewardObj.count.toLocaleString()} ($
