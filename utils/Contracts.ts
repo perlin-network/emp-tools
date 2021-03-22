@@ -3,6 +3,9 @@
 export type ContractArguments = [string, string, string];
 export const Contracts: { [networkId: number]: ContractArguments[] } = {
   1: [
+    ["0x46f5E363e69798a74c8422BFb9EDB63e3FB0f08a", "EMP", "1"],
+    ["0xfDF90C4104c1dE34979235e6AE080528266a14a3", "EMP", "1"],
+    ["0xb40BA94747c59d076B3c189E3A031547492013da", "EMP", "1"],
     ["0x3f2D9eDd9702909Cf1F8C4237B7c4c5931F9C944", "EMP", "1"], // ETHBTC
     ["0x67DD35EaD67FcD184C8Ff6D0251DF4241F309ce1", "EMP", "1"], // yCOMP
     ["0xb56C5f1fB93b1Fbd7c473926c87B6B9c4d0e21d5", "EMP", "1"], // yUSD-SEP20
